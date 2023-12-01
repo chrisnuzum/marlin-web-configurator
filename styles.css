@@ -1,0 +1,102 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-size: 18px;
+    font-family: Arial, sans-serif;
+}
+
+nav {
+    margin: 0;
+    display: block;
+    overflow: hidden;
+    background-color: #333;
+}
+nav > ul {
+    margin: 0;
+    padding-left: 1.0em;
+    list-style: none;
+}
+nav > ul > li {
+    padding: 0.4em 1.0em;
+    display: inline-block;
+    color: white;
+}
+nav li > ul {
+    margin-top: 0.4em;
+    margin-left: -1.0em;
+    padding: 0;
+    display: none;
+    background-color: #333;
+    list-style: none;
+}
+nav li li {
+    padding: 0.4em 1.0em;
+    display: block;
+    color: white;
+}
+nav li:hover {
+    background-color: #666;
+    cursor: pointer;
+}
+nav li:hover > ul {
+    position: absolute;
+    display: block;
+}
+nav label {
+    cursor: pointer;
+}
+nav input[type="file"] {
+    width: 0;
+    opacity: 0;
+}
+h1 {
+    margin-top: 0.5em;
+    color: darkslategray;
+    text-align: center;
+}
+h3 {
+    text-align: center;
+}
+#test {
+    color: black;
+    padding: 22px 0 5px;
+    overflow-y: auto;
+    max-height: 400px;
+    width: 100%;
+}
+#right_span {
+    float: right;
+}
+
+
+/*
+* { outline: 2px dotted red }
+* * { outline: 2px dotted green }
+* * * { outline: 2px dotted orange }
+* * * * { outline: 2px dotted blue }
+* * * * * { outline: 1px solid red }
+* * * * * * { outline: 1px solid green }
+* * * * * * * { outline: 1px solid orange }
+* * * * * * * * { outline: 1px solid blue }
+*/
+
+
+/*
+.base {  display: grid;
+  grid-template-columns: 1.3fr 0.7fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 0px 0px;
+  grid-auto-flow: row;
+  grid-template-areas:
+    "menubar menubar"
+    "settings info-popup";
+}
+
+.menubar { grid-area: menubar; }
+
+.settings { grid-area: settings; }
+
+.info-popup { grid-area: info-popup; }
+*/
+
+

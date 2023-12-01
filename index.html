@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html manifest="manifest.mf">
+    <head>
+        <title>Marlin Configurator</title>
+        <link rel="stylesheet" href="styles.css" />
+        <script async src="script.js"></script>
+    </head>
+    <body id="container">
+        <nav>
+            <ul>
+                <li>
+                    File
+                    <ul>
+                        <li>
+                            <label for="file_upload">Load config file</label>
+                            <input
+                                type="file"
+                                id="file_upload"
+                                accept=".h, .txt"
+                                onchange="loadFile()" />
+                        </li>
+                        <li onclick="saveFile()">
+                            Save changes<!-- could have this be italic "No changes detected" at beginning -->
+                        </li>
+                    </ul>
+                </li>
+                <!-- this comment removes weird ~1px horizontal space between items
+             -->
+                <li>About</li>
+            </ul>
+        </nav>
+        <h1>Marlin Configurator</h1>
+        <noscript
+            >Please enable JavaScript to be able to use this tool.</noscript
+        >
+        <details>
+            <summary>Examples:</summary>
+            <p>Slider:</p>
+            <input
+                type="range"
+                min="0"
+                max="20"
+                value="0"
+                oninput="amount.value=this.value" />
+            <output id="amount">0</output>
+            <input
+                type="range"
+                id="amountRange"
+                min="0"
+                max="20"
+                value="0"
+                oninput="amountInput.value=this.value" />
+            <input
+                type="number"
+                id="amountInput"
+                min="0"
+                max="20"
+                value="0"
+                oninput="numInput()" />
+            <!--oninput="amountRange.value=this.value"
+oninput="this.value=this.valueAsNumber;this.value < this.min ? this.value = this.min;this.value > this.max ? this.value = this.max"-->
+            <hr />
+            <p>Checkbox:</p>
+            <input type="checkbox" id="one" value="1" />
+            <label for="one">Number 1</label>
+            <input type="checkbox" id="two" value="2" />
+            <label for="two">Number 2</label>
+            <hr />
+            <p>Radio Buttons:</p>
+            <input
+                type="radio"
+                id="red"
+                name="radio_group_1"
+                value="RED" /><label for="red">Color red</label>
+            <input
+                type="radio"
+                id="blue"
+                name="radio_group_1"
+                value="BLUE" /><label for="blue">Color blue</label>
+            <input
+                type="radio"
+                id="green"
+                name="radio_group_1"
+                value="GREEN" /><label for="green">Color green</label>
+            <hr />
+            <p>Text:</p>
+            <label for="fname">First name: </label>
+            <input type="text" id="fname" />
+            <hr />
+            <label for="address_text">Address:</label>
+            <textarea id="address_text" rows="4" cols="50">
+1111 Street Road
+City, State 11111</textarea
+            >
+            <hr />
+            <p>Dropdown:</p>
+            <label for="cars">Choose a car:</label>
+            <select id="cars">
+                <option value="volvo">Volvo</option>
+                <option value="saab">Saab</option>
+                <option value="opel">Opel</option>
+                <option value="audi">Audi</option>
+            </select>
+            <hr />
+            <p>Hideable:</p>
+            <details>
+                <summary>Epcot Center</summary>
+                <p>
+                    Epcot is a theme park at Walt Disney World Resort featuring
+                    exciting attractions, international pavilions, award-winning
+                    fireworks and seasonal special events.
+                </p>
+                <details>
+                    <summary>Double Nested</summary>
+                    <p>Blah blah blah blah</p>
+                </details>
+            </details>
+            <hr />
+            <span>On left</span>
+            <span id="right_span">On right</span>
+            <hr />
+            <p>
+                Could use code tag to <code>monospace text.</code
+                ><strong>Bold text</strong> and <em>italic text.</em> Other
+                <b>bold text</b> when not important.
+                <mark>Highlighted text.</mark> <s>Strikethrough</s> Normal
+                <sub>subscript</sub> <sup>superscript</sup> <u>underlined</u>
+            </p>
+            <hr />
+            <p>Meter:</p>
+            <label for="meter">Percentage filled:</label>
+            <meter id="meter" value="3" min="0" max="10">3 out of 10</meter>
+            <hr />
+            <p>Progress:</p>
+            <label for="progress">Downloading progress:</label>
+            <progress id="progress" value="32" max="100">32%</progress>
+        </details>
+        <br />
+        <hr />
+        <!--
+        <iframe
+            width="100%"
+            height="300"
+            style="border: none"
+            src="https://marlinfw.org/docs/configuration/configuration.html"
+            title="Explanation of setting"></iframe>
+        -->
+        <div id="test" class="settings">gtgtgtgtg</div>
+        <div class="info-popup"></div>
+        <!-- use <aside> for sidebar?-->
+    </body>
+</html>
