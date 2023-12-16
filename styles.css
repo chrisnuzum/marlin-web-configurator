@@ -1,8 +1,11 @@
+html {
+    font-size: 18px;
+    font-family: monospace;
+}
+
 body {
     margin: 0;
     padding: 0;
-    font-size: 18px;
-    font-family: Arial, sans-serif;
 }
 
 nav {
@@ -13,24 +16,24 @@ nav {
 }
 nav > ul {
     margin: 0;
-    padding-left: 1.0em;
+    padding-left: 1em;
     list-style: none;
 }
 nav > ul > li {
-    padding: 0.4em 1.0em;
+    padding: 0.4em 1em;
     display: inline-block;
     color: white;
 }
 nav li > ul {
     margin-top: 0.4em;
-    margin-left: -1.0em;
+    margin-left: -1em;
     padding: 0;
     display: none;
     background-color: #333;
     list-style: none;
 }
 nav li li {
-    padding: 0.4em 1.0em;
+    padding: 0.4em 1em;
     display: block;
     color: white;
 }
@@ -67,7 +70,35 @@ h3 {
 #right_span {
     float: right;
 }
-
+label {
+    white-space: pre-line;
+}
+.widgetBase {
+    display: flex;
+    align-items: center;
+}
+.widgetBase input[type="checkbox"] {
+    margin: 0.4rem;
+    width: 1.4rem;
+    height: 1.4rem;
+}
+.widgetBase input[type="checkbox"] ~ label {
+    color: gray;
+    text-decoration: line-through;
+}
+.widgetBase input[type="checkbox"]:checked ~ label {
+    color: black;
+    text-decoration: none;
+}
+.widgetBase input[type="text"],
+select {
+    font-family: monospace;
+    font-size: 1rem;
+    margin-left: auto;
+}
+.widgetBase input[type="text"] {
+    width: 500px;
+}
 
 /*
 * { outline: 2px dotted red }
@@ -79,7 +110,6 @@ h3 {
 * * * * * * * { outline: 1px solid orange }
 * * * * * * * * { outline: 1px solid blue }
 */
-
 
 /*
 .base {  display: grid;
@@ -98,5 +128,3 @@ h3 {
 
 .info-popup { grid-area: info-popup; }
 */
-
-
