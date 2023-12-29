@@ -73,7 +73,20 @@ h3 {
 label {
     white-space: pre-line;
 }
-.widgetBase {
+label.at_header {
+    font-weight: bold;
+    display: block;
+    text-align: center;
+}
+label.equals_header {
+    font-size: 22px;
+    display: block;
+    text-align: center;
+}
+label.block_comment {
+    background-color: rgb(167, 167, 167);
+}
+.widgetBase {   /* center align widgets horizontally */
     display: flex;
     align-items: center;
 }

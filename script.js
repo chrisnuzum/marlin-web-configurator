@@ -228,10 +228,18 @@ class Widget {
         if (type === "dropdown") {
             // if contains a colon then it is in value:'display_text' format
             let dropdownElement = document.createElement("select");
+            let foundValue = false;
             for (const option of dropdownOptions) {
                 let o = document.createElement("option");
                 o.textContent = option;
+                if (!foundValue && option === value) {
+                    foundValue = true;
+                    o.setAttribute("selected", "");
+                }
                 dropdownElement.append(o);
+            }
+            if (!foundValue) {
+                console.error("Selected dropdown option not in list!");
             }
             this.htmlElement.append(dropdownElement);
         } else if (type === "multiple") {
@@ -241,6 +249,7 @@ class Widget {
             textbox.setAttribute("value", value);
             this.htmlElement.append(textbox);
         } else if (type === "other") {
+            
         }
     }
     addTooltip(tooltipText) {}
@@ -438,6 +447,7 @@ function make_widgets2(lines) {
                 isDisabled = true;
             }
             if (line.dropdownOptions || blockCommentDropdownOptions !== null) {
+                // Also need to check if current variable ends in _#, if so check if beginning of name has a dropdown list and apply same options
                 console.log(
                     count + " - Applying dropdown options to " + line.variable
                 );
@@ -453,7 +463,8 @@ function make_widgets2(lines) {
                     type: "dropdown",
                     isDisabled: isDisabled,
                     dropdownOptions: dropdownOptions,
-                    variableName: line.variable
+                    variableName: line.variable,
+                    value: line.value
                 });
             } else if (!line.value || line.value === "") {
                 console.log(count + " - checkbox: " + line.variable);
@@ -467,7 +478,8 @@ function make_widgets2(lines) {
                 widget = new Widget({
                     type: "multiple",
                     isDisabled: isDisabled,
-                    variableName: line.variable
+                    variableName: line.variable,
+                    value: line.value
                 });
             } else if (line.hasQuote) {
                 console.log(count + " - textbox: " + line.variable);
@@ -482,7 +494,8 @@ function make_widgets2(lines) {
                 widget = new Widget({
                     type: "other",
                     isDisabled: isDisabled,
-                    variableName: line.variable
+                    variableName: line.variable,
+                    value: line.value
                 });
             }
             if (line.hasLineEndComment) {
