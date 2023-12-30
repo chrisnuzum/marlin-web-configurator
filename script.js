@@ -13,7 +13,15 @@ class Line {
         this.hasHashtag = regex_match.groups.has_hashtag;
         this.pragmaLine = regex_match.groups.pragma_line;
 
-        this.ifStatement = regex_match.groups.if_statement;
+        this.ifStatement = regex_match.groups.if_statement; // ifndef|ifdef|if|elif
+        /*
+        If statement types:
+        ifdef VAR_NAME
+        if ANY(VAR_1, VAR_2)                enabled
+        if VAR_NAME > #   if VAR_NAME(#)    condition
+        
+        if VAR_NAME
+        */
         this.enabledType = regex_match.groups.enabled_type; // ENABLED|DISABLED|ANY|ALL|BOTH|EITHER (last 2 not used anymore)
         if (regex_match.groups.enabled_type_vars !== undefined) {
             this.enabledTypeVars =
@@ -38,10 +46,11 @@ class Line {
         this.spaceToComment = regex_match.groups.space_to_comment;
         this.hasLineEndComment = regex_match.groups.has_line_end_comment;
 
-        this.dropdownOptions = regex_match.groups.special_comment_line;
-        if (this.dropdownOptions !== undefined) {
+        if (regex_match.groups.special_comment_line !== undefined) {
             this.dropdownOptions =
                 regex_match.groups.special_comment_line.split(", "); // check for colon for key:value pairs
+        } else {
+            this.dropdownOptions = undefined;
         }
         this.commentText = regex_match.groups.comment_text;
     }
@@ -81,6 +90,10 @@ class HideableContainer {
      *      whenever checkCondition is called
      * to change details open (or checkbox checked or disabled) attribute, must use
      *      .setAttribute("open", "") to open and .removeAttribute("open") to close
+     * 
+     * TODO: lines 160, 164, 169 need addressed
+     * #if TEMP_SENSOR_IS_MAX_TC(1)
+     * #if HAS_E_TEMP_SENSOR
      */
     constructor() {
         this.htmlElement = document.createElement("details");
@@ -249,10 +262,15 @@ class Widget {
             textbox.setAttribute("value", value);
             this.htmlElement.append(textbox);
         } else if (type === "other") {
-            
+            /*
+            Possible values:
+            02010300, Version.h, BOARD_BTT_SKR_MINI_E3_V3_0, 128
+            */
         }
     }
-    addTooltip(tooltipText) {}
+    addTooltip(tooltipText) {
+        // TODO: this function is already called appropriately, just needs code
+    }
     addContainer(container) {
         this.containers.push(container); //on widget value change, call container.check()
     }
@@ -291,6 +309,7 @@ function loadFile() {
                 document
                     .getElementById("container")
                     .appendChild(document.createElement("br"));
+                // TODO: get rid of <br> and just add margin/padding around widgets
             }
         };
         reader.readAsText(file);
@@ -325,7 +344,6 @@ function make_widgets2(lines) {
     var hideableContainers = [];
     var variableWidgetPairs = {}; // store string of define variable and corresponding widget that can be searched when if statements are encountered later
     // in order to add the hideable container to the corresponding variable widget so {"SINGLE_NOZZLE": checkboxobject}
-    let ifLevel = 0;
     let blockLabel = null;
     let blockCommentDropdownOptions = null;
     let count = 0;
@@ -373,34 +391,50 @@ function make_widgets2(lines) {
         } else if (line.ifStatement) {
             let newContainer = new HideableContainer();
             count++;
-            if (line.enabledType) {
-                newContainer.setCondition({
+            if (line.enabledType || line.ifStatement == "ifdef" || line.ifStatement == "ifndef") {
+				let lineEnabledType = null;
+                let lineEnabledTypeVars = null;
+                if (line.ifStatement == "ifdef") {
+                    lineEnabledType = "ENABLED";
+                    lineEnabledTypeVars = line.conditionVariable;
+                } else if (line.ifStatement == "ifndef") {
+                    lineEnabledType = "DISABLED";
+                    lineEnabledTypeVars = line.conditionVariable;
+                } else {
+                    lineEnabledType = line.enabledType;
+                    lineEnabledTypeVars = line.enabledTypeVars;
+                }
+                console.log("If statement enabled type: " + lineEnabledType + ", variable: " + lineEnabledTypeVars);
+				newContainer.setCondition({
                     type: "enabledType",
-                    enabledType: line.enabledType,
-                    enabledTypeVars: line.enabledTypeVars
+                    enabledType: lineEnabledType,
+                    enabledTypeVars: lineEnabledTypeVars
                 });
-                for (const typeVariable of line.enabledTypeVars) {
-                    let foundWidget = variableWidgetPairs[typeVariable];
-                    if (foundWidget === undefined) {
-                        // TODO: this is not necessarily unwanted behavior, line 74 MOTHERBOARD is not defined beforehand
-                        console.error(
-                            "If statement variable (enabled type) has not been defined yet!: " +
-                                typeVariable
-                        );
-                    } else {
-                        console.log(
-                            count +
-                                " - Successfully found if statement variable (enabled type): " +
-                                typeVariable
-                        );
-                        foundWidget.addContainer(newContainer);
-                        newContainer.addConditionWidget(
-                            foundWidget.htmlElement
-                        );
+                if (line.enabledTypeVars !== undefined) {
+                    for (const typeVariable of line.enabledTypeVars) {
+                        let foundWidget = variableWidgetPairs[typeVariable];
+                        if (foundWidget === undefined) {
+                            // TODO: this is not necessarily unwanted behavior, line 74 MOTHERBOARD is not defined beforehand
+                            console.error(
+                                "If statement variable (enabled type) has not been defined yet!: " +
+                                    typeVariable
+                            );
+                        } else {
+                            console.log(
+                                count +
+                                    " - Successfully found if statement variable (enabled type): " +
+                                    typeVariable
+                            );
+                            foundWidget.addContainer(newContainer);
+                            newContainer.addConditionWidget(
+                                foundWidget.htmlElement
+                            );
+                        }
                     }
                 }
+
             } else {
-                let foundWidget = variableWidgetPairs[line.conditionVariable];
+				let foundWidget = variableWidgetPairs[line.conditionVariable];
                 if (foundWidget === undefined) {
                     console.error(
                         "If statement variable (condition type) has not been defined yet!: " +
@@ -431,12 +465,17 @@ function make_widgets2(lines) {
             }
             //newContainer.checkCondition();    //TODO: enable this and fix error
             hideableContainers.push(newContainer);
-            ifLevel += 1;
-            htmlElements.push(hideableContainers[ifLevel - 1]);
-            // to get last: hideableContainers[hideableContainers.length - 1] OR hideableContainers[ifLevel - 1]
+            if (hideableContainers.length > 1) {
+                // check if this is working (.htmlElement)
+                // line 155 of sample.h displays incorrectly
+                hideableContainers[hideableContainers.length - 2].addElement(hideableContainers[hideableContainers.length - 1].htmlElement);
+            } else {
+                htmlElements.push(hideableContainers[hideableContainers.length - 1]);
+            }
+            
+            // to get last: hideableContainers[hideableContainers.length - 1]
         } else if (line.endif) {
-            ifLevel -= 1;
-            if (ifLevel < 0) {
+            if (hideableContainers.pop() === undefined) {
                 console.error(index + " - More endifs than ifs!");
             }
         } else if (line.isDefine) {
@@ -501,8 +540,8 @@ function make_widgets2(lines) {
             if (line.hasLineEndComment) {
                 widget.addTooltip(line.commentText);
             }
-            if (ifLevel > 0) {
-                hideableContainers[ifLevel - 1].addElement(widget.htmlElement);
+            if (hideableContainers.length > 0) {
+                hideableContainers[hideableContainers.length - 1].addElement(widget.htmlElement);
             } else {
                 htmlElements.push(widget);
             }
