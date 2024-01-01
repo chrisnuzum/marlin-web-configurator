@@ -112,6 +112,9 @@ select {
 .widgetBase input[type="text"] {
     width: 500px;
 }
+details > details {
+    margin-left: 2.0rem;
+}
 
 /*
 * { outline: 2px dotted red }

@@ -1,3 +1,13 @@
+/* TODO:
+
+Make comments be added to hideableContainers
+Disable/make readonly/gray out controls that aren't enabled or are in a hideableContainer that isn't active
+Add all of the "other" and "multiple" controls
+Deal with special if statements on lines 160, 164, and 169 (they display now but might cause errors when checking for conditions)
+
+
+*/
+
 var matches = []; // probably doesn't need to be global
 
 class Line {
@@ -46,7 +56,7 @@ class Line {
         this.spaceToComment = regex_match.groups.space_to_comment;
         this.hasLineEndComment = regex_match.groups.has_line_end_comment;
 
-        if (regex_match.groups.special_comment_line !== undefined) {
+        if (regex_match.groups.special_comment_line !== undefined) { // TODO: line 311 uses :{} instead of :[]
             this.dropdownOptions =
                 regex_match.groups.special_comment_line.split(", "); // check for colon for key:value pairs
         } else {
@@ -244,8 +254,14 @@ class Widget {
             let foundValue = false;
             for (const option of dropdownOptions) {
                 let o = document.createElement("option");
-                o.textContent = option;
-                if (!foundValue && option === value) {
+                let optionText = null;
+                if (option.charAt(0) == "'") {
+                    optionText = option.slice(1, -1);
+                } else {
+                    optionText = option;
+                }
+                o.textContent = optionText;
+                if (!foundValue && optionText == value) {
                     foundValue = true;
                     o.setAttribute("selected", "");
                 }
@@ -253,6 +269,7 @@ class Widget {
             }
             if (!foundValue) {
                 console.error("Selected dropdown option not in list!");
+                // TODO: this is triggering when it shouldn't be
             }
             this.htmlElement.append(dropdownElement);
         } else if (type === "multiple") {
@@ -346,6 +363,8 @@ function make_widgets2(lines) {
     // in order to add the hideable container to the corresponding variable widget so {"SINGLE_NOZZLE": checkboxobject}
     let blockLabel = null;
     let blockCommentDropdownOptions = null;
+    let lastBlockCommentDropdownOptions = null;
+    let lastVariableName = null;
     let count = 0;
     for (const [index, line] of lines.entries()) {
         if (line.isBlockComment) {
@@ -447,27 +466,31 @@ function make_widgets2(lines) {
                             line.conditionVariable
                     );
                     foundWidget.addContainer(newContainer);
-                    if (line.operator) {
-                        newContainer.setCondition({
-                            type: "condition",
-                            conditionVariable: line.conditionVariable,
-                            operator: line.operator,
-                            conditionValue: line.conditionValue
-                        });
-                    } else {
-                        newContainer.setCondition({
-                            type: "condition",
-                            conditionVariable: line.conditionVariable
-                        });
-                    }
                     newContainer.addConditionWidget(foundWidget);
+                }
+                if (line.operator) {
+                    newContainer.setCondition({
+                        type: "condition",
+                        conditionVariable: line.conditionVariable,
+                        operator: line.operator,
+                        conditionValue: line.conditionValue
+                    });
+                } else {
+                    newContainer.setCondition({
+                        type: "condition",
+                        conditionVariable: line.conditionVariable
+                    });
                 }
             }
             //newContainer.checkCondition();    //TODO: enable this and fix error
+            if (line.ifStatement == "elif") {
+                if (hideableContainers.pop() === undefined) {
+                    console.error(index + " - hideableContainers already empty!");
+                }
+            }
             hideableContainers.push(newContainer);
             if (hideableContainers.length > 1) {
-                // check if this is working (.htmlElement)
-                // line 155 of sample.h displays incorrectly
+                console.log(index + " - adding hideableContainer to parent container");
                 hideableContainers[hideableContainers.length - 2].addElement(hideableContainers[hideableContainers.length - 1].htmlElement);
             } else {
                 htmlElements.push(hideableContainers[hideableContainers.length - 1]);
@@ -485,14 +508,24 @@ function make_widgets2(lines) {
             if (line.isLineComment) {
                 isDisabled = true;
             }
+            if (lastBlockCommentDropdownOptions !== null) {
+                if (lastVariableName.indexOf("_") > -1 && line.variable.endsWith(lastVariableName.slice(lastVariableName.indexOf("_")))) {
+                    blockCommentDropdownOptions = lastBlockCommentDropdownOptions;
+                } else {
+                    lastBlockCommentDropdownOptions = null;
+                }
+            }
             if (line.dropdownOptions || blockCommentDropdownOptions !== null) {
-                // Also need to check if current variable ends in _#, if so check if beginning of name has a dropdown list and apply same options
+                // Also need to check if current variable is similar to one prior, if so check first has a dropdown list and apply same options
+                // lines 90-96: X_DRIVER_TYPE, Y_, Z_, I_, J_, K_, E0_
                 console.log(
                     count + " - Applying dropdown options to " + line.variable
                 );
                 let dropdownOptions = [];
                 if (blockCommentDropdownOptions !== null) {
                     dropdownOptions = blockCommentDropdownOptions;
+                    lastBlockCommentDropdownOptions = blockCommentDropdownOptions;
+                    lastVariableName = line.variable;
                     blockCommentDropdownOptions = null;
                 } else {
                     dropdownOptions = line.dropdownOptions;
