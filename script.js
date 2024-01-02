@@ -5,7 +5,12 @@ Disable/make readonly/gray out controls that aren't enabled or are in a hideable
 Add all of the "other" and "multiple" controls
 Deal with special if statements on lines 160, 164, and 169 (they display now but might cause errors when checking for conditions)
 
+*/
 
+/*
+Notes:
+Lines 1708 & 2604: problem fixed with regex but maybe a typo in the original document, uses :{ } instead of :[ ]
+Line 3455: should definitely have spaces after commas
 */
 
 var matches = []; // probably doesn't need to be global
@@ -56,9 +61,14 @@ class Line {
         this.spaceToComment = regex_match.groups.space_to_comment;
         this.hasLineEndComment = regex_match.groups.has_line_end_comment;
 
-        if (regex_match.groups.special_comment_line !== undefined) { // TODO: line 311 uses :{} instead of :[]
-            this.dropdownOptions =
-                regex_match.groups.special_comment_line.split(", "); // check for colon for key:value pairs
+        if (regex_match.groups.special_comment_line !== undefined) {
+            if (regex_match.groups.special_comment_line.includes(", ")) {
+                this.dropdownOptions =
+                    regex_match.groups.special_comment_line.split(", ");
+            } else {    // for line 3455 which doesn't put spaces after commas
+                this.dropdownOptions =
+                    regex_match.groups.special_comment_line.split(",");
+            }
         } else {
             this.dropdownOptions = undefined;
         }
@@ -69,19 +79,19 @@ class Line {
 class Label {
     // check for links in block and line comments: https://stackoverflow.com/questions/49634850/convert-plain-text-links-to-clickable-links?answertab=trending#tab-top
     constructor(type = "line", text = "") {
-        this.htmlElement = document.createElement("label");
+        this.baseElement = document.createElement("label");
         this.text = text;
-        if (type === "block") {
+        if (type == "block") {
             this.text = "";
-            this.htmlElement.setAttribute("class", "block_comment");
-        } else if (type === "at_header") {
-            this.htmlElement.setAttribute("class", "at_header");
+            this.baseElement.setAttribute("class", "block_comment");
+        } else if (type == "at_header") {
+            this.baseElement.setAttribute("class", "at_header");
             this.finalize();
-        } else if (type === "equals_header") {
-            this.htmlElement.setAttribute("class", "equals_header");
+        } else if (type == "equals_header") {
+            this.baseElement.setAttribute("class", "equals_header");
             this.finalize();
-        } else if (type === "line") {
-            this.htmlElement.setAttribute("class", "line_comment");
+        } else if (type == "line") {
+            this.baseElement.setAttribute("class", "line_comment");
             this.finalize();
         } else {
             console.error("Bad label type: " + type);
@@ -91,7 +101,7 @@ class Label {
         this.text += new_line + "\r\n";
     }
     finalize() {
-        this.htmlElement.textContent = this.text;
+        this.baseElement.textContent = this.text;
     }
 }
 
@@ -101,16 +111,16 @@ class HideableContainer {
      * to change details open (or checkbox checked or disabled) attribute, must use
      *      .setAttribute("open", "") to open and .removeAttribute("open") to close
      * 
-     * TODO: lines 160, 164, 169 need addressed
+     * TODO: lines 160, 164, 169 need addressed for condition checking
      * #if TEMP_SENSOR_IS_MAX_TC(1)
      * #if HAS_E_TEMP_SENSOR
      */
     constructor() {
-        this.htmlElement = document.createElement("details");
+        this.baseElement = document.createElement("details");
         this.conditionWidgets = [];
     }
     addElement(element) {
-        this.htmlElement.append(element);
+        this.baseElement.append(element);
     }
     setCondition({
         type,
@@ -120,13 +130,13 @@ class HideableContainer {
         operator = "",
         conditionValue = ""
     } = {}) {
-        if (type === "enabledType") {
+        if (type == "enabledType") {
             this.enabledType = enabledType;
             this.enabledTypeVars = enabledTypeVars;
             let title = document.createElement("summary");
             title.textContent = enabledType + "(" + enabledTypeVars + ")";
-            this.htmlElement.append(title);
-        } else if (type === "condition") {
+            this.baseElement.append(title);
+        } else if (type == "condition") {
             if (operator !== "") {
                 this.operator = operator;
             } else {
@@ -137,10 +147,10 @@ class HideableContainer {
             }
             let title = document.createElement("summary");
             title.textContent = conditionVariable + operator + conditionValue;
-            if (operator === "(") {
+            if (operator == "(") {
                 title.textContent += ")";
             }
-            this.htmlElement.append(title);
+            this.baseElement.append(title);
         }
         this.type = type;
     }
@@ -148,65 +158,72 @@ class HideableContainer {
         this.conditionWidgets.push(widget);
     }
     checkCondition() {
-        if (this.type === "enabledType") {
-            for (const widget of this.conditionWidgets) {
-                if (["ENABLED", "ANY"].includes(this.enabledType)) {
-                    this.htmlElement.removeAttribute("open", "");
-                    if (widget.isEnabled()) {
-                        this.htmlElement.setAttribute("open", "");
-                        break;
+        if (this.conditionWidgets.length > 0) {
+            if (this.type == "enabledType") {
+                for (const widget of this.conditionWidgets) {
+                    if (["ENABLED", "ANY"].includes(this.enabledType)) {
+                        this.baseElement.removeAttribute("open", "");
+                        if (widget.isEnabled()) {
+                            this.baseElement.setAttribute("open", "");
+                            break;
+                        }
+                    } else if (this.enabledType == "ALL") {
+                        this.baseElement.setAttribute("open", "");
+                        if (!widget.isEnabled()) {
+                            this.baseElement.removeAttribute("open", "");
+                            break;
+                        }
+                    } else if (this.enabledType == "DISABLED") {
+                        this.baseElement.setAttribute("open", "");
+                        if (widget.isEnabled()) {
+                            this.baseElement.removeAttribute("open", "");
+                            break;
+                        }
+                    } else {
+                        console.error(
+                            "Unknown enabledType for hideable container: " +
+                            this.enabledType
+                        );
                     }
-                } else if (this.enabledType === "ALL") {
-                    this.htmlElement.setAttribute("open", "");
-                    if (!widget.isEnabled()) {
-                        this.htmlElement.removeAttribute("open", "");
-                        break;
-                    }
-                } else if (this.enabledType === "DISABLED") {
-                    this.htmlElement.setAttribute("open", "");
+                }
+            } else if (this.type == "condition") {
+                if (this.conditionWidgets.length > 1) {
+                    console.error("More than one condition widget for operator/condition type widget!");
+                }
+                const widget = this.conditionWidgets[0];    // there can only be 1
+                if (this.operator == "NO OPERATOR") {
+                    this.baseElement.removeAttribute("open", "");
                     if (widget.isEnabled()) {
-                        this.htmlElement.removeAttribute("open", "");
-                        break;
+                        this.baseElement.setAttribute("open", "");
+                    }
+                } else if (this.operator == "(") {
+                    this.baseElement.removeAttribute("open", "");
+                    if (widget.getValue() == Number(this.conditionValue)) {
+                        this.baseElement.setAttribute("open", "");
+                    }
+                } else if (this.operator == "<") {
+                    this.baseElement.removeAttribute("open", "");
+                    if (widget.getValue() < Number(this.conditionValue)) {
+                        this.baseElement.setAttribute("open", "");
+                    }
+                } else if (this.operator == ">") {
+                    this.baseElement.removeAttribute("open", "");
+                    if (widget.getValue() > Number(this.conditionValue)) {
+                        this.baseElement.setAttribute("open", "");
                     }
                 } else {
                     console.error(
-                        "Unknown enabledType for hideable container: " +
-                            this.enabledType
+                        "Unknown operator type for hideable container: " +
+                        this.operator
                     );
-                }
-            }
-        } else if (this.type === "condition") {
-            const widget = this.conditionWidgets[0];
-            if (this.operator === "NO OPERATOR") {
-                this.htmlElement.removeAttribute("open", "");
-                if (widget.isEnabled()) {
-                    this.htmlElement.setAttribute("open", "");
-                }
-            } else if (this.operator === "(") {
-                this.htmlElement.removeAttribute("open", "");
-                if (widget.getValue() === Number(this.conditionValue)) {
-                    this.htmlElement.setAttribute("open", "");
-                }
-            } else if (this.operator === "<") {
-                this.htmlElement.removeAttribute("open", "");
-                if (widget.getValue() < Number(this.conditionValue)) {
-                    this.htmlElement.setAttribute("open", "");
-                }
-            } else if (this.operator === ">") {
-                this.htmlElement.removeAttribute("open", "");
-                if (widget.getValue() > Number(this.conditionValue)) {
-                    this.htmlElement.setAttribute("open", "");
                 }
             } else {
                 console.error(
-                    "Unknown operator type for hideable container: " +
-                        this.operator
+                    "Unknown condition type for hideable container: " + this.type
                 );
             }
         } else {
-            console.error(
-                "Unknown condition type for hideable container: " + this.type
-            );
+            console.log("No condition widgets for this condition.");
         }
     }
 }
@@ -220,6 +237,8 @@ class Widget {
      * Should set up event listeners that change this.changed to true (could check if value matches
      *      original value) and maybe updates this.value?
      *      Event listener should also call HideableContainer.checkCondition() on each of this.containers
+     *      Events: "input" is fired whenever value is changed at all.
+     *              "change" is fired when input is changed for checkbox and dropdown but only when losing focus for text
      * To change details open (or checkbox checked or disabled) attribute, must use
      *      .setAttribute("open", "") to open and .removeAttribute("open") to close
      */
@@ -231,62 +250,120 @@ class Widget {
         value
     } = {}) {
         // call with Widget({type: "dropdown", isDisabled: false})
-        this.htmlElement = document.createElement("div");
-        this.htmlElement.setAttribute("class", "widgetBase");
+        this.type = type;
+        this.baseElement = document.createElement("div");
+        this.baseElement.setAttribute("class", "widgetBase");
+        this.widgetElement = null;
         this.isDisabled = isDisabled;
         this.containers = [];
+        this.initialValue = null;
         this.changed = false;
-        if (isDisabled === true || type === "checkbox") {
+        if (isDisabled == true || type == "checkbox") {
             let checkbox = document.createElement("input");
             checkbox.setAttribute("type", "checkbox");
-            if (isDisabled === false) {
+            if (isDisabled == false) {
                 console.log("Checkbox disabled = false: " + variableName);
                 checkbox.setAttribute("checked", "");
+                this.initialValue = true;
             }
-            this.htmlElement.append(checkbox);
+            this.baseElement.append(checkbox);
+            if (type == "checkbox") {
+                this.widgetElement = checkbox;
+            }
         }
         let label = document.createElement("label");
         label.textContent = variableName;
-        this.htmlElement.append(label);
-        if (type === "dropdown") {
+        this.baseElement.append(label);
+        if (type == "dropdown") {
             // if contains a colon then it is in value:'display_text' format
             let dropdownElement = document.createElement("select");
             let foundValue = false;
             for (const option of dropdownOptions) {
                 let o = document.createElement("option");
-                let optionText = null;
-                if (option.charAt(0) == "'") {
-                    optionText = option.slice(1, -1);
-                } else {
-                    optionText = option;
+                let optionValue = option;
+                let optionText = option;
+                if (optionText.includes(":")) {
+                    optionValue = optionValue.slice(0, optionValue.indexOf(":"));
+                    optionText = optionText.slice(optionText.indexOf(":") + 1);
+                }
+                if (optionValue.charAt(0) == "'") {
+                    optionValue = optionValue.slice(1, -1);
+                }
+                if (optionText.charAt(0) == "'") {
+                    optionText = optionText.slice(1, -1);
                 }
                 o.textContent = optionText;
-                if (!foundValue && optionText == value) {
+                o.setAttribute("value", optionValue);
+
+                if (!foundValue && optionValue == value) {
                     foundValue = true;
+                    this.initialValue = value;
                     o.setAttribute("selected", "");
                 }
                 dropdownElement.append(o);
             }
             if (!foundValue) {
                 console.error("Selected dropdown option not in list!");
-                // TODO: this is triggering when it shouldn't be
             }
-            this.htmlElement.append(dropdownElement);
-        } else if (type === "multiple") {
-        } else if (type === "text_box") {
+            this.baseElement.append(dropdownElement);
+            this.widgetElement = dropdownElement;
+        } else if (type == "textbox") {    // TODO: if over a certain length, probably use <textarea> instead
             let textbox = document.createElement("input");
             textbox.setAttribute("type", "text");
             textbox.setAttribute("value", value);
-            this.htmlElement.append(textbox);
-        } else if (type === "other") {
+            this.baseElement.append(textbox);
+            this.initialValue = value;
+            this.widgetElement = textbox;
+        } else if (type == "multiple") {
             /*
             Possible values:
-            02010300, Version.h, BOARD_BTT_SKR_MINI_E3_V3_0, 128
+            { 0, 90 }
+            { 80, 80, 400, 93 }
+            (133*60)
+            { PROBE_DEPLOY_FEEDRATE, { 245, 114, 30 } }
+            { (X_BED_SIZE) * 3 / 4 - (CLIP_W) / 2, (Y_BED_SIZE) - (CLIP_H), (X_BED_SIZE) * 3 / 4 + (CLIP_W) / 2, Y_BED_SIZE }
+            ((CLIP_H) + 1)
+            { (50*60), (50*60), (4*60) }
+            { 698, 300, 0, 50, 523, 50, 0, 25, 494, 50, 0, 25, 523, 100, 0, 50, 554, 300, 0, 100, 523, 300 }
             */
+        } else if (type == "other") {
+            /*
+            Possible values:
+            02010300
+            Version.h
+            BOARD_BTT_SKR_MINI_E3_V3_0
+            128
+            1.75
+            -50
+            282.8427124746
+            */
+        }
+        if (this.initialValue === null) {
+            console.error("widget initial value has not been set!");
+        }
+        if (this.widgetElement === null) {
+            console.error("widgetElement has not been set!");
+        } else {
+            this.widgetElement.addEventListener("change", () => {
+                // "this" inside this function refers to the actual HTML element,
+                // NOT the Widget object                
+                if (this.widgetElement !== undefined)
+                {
+                    if (this.widgetElement.value !== this.initialValue) {
+                        this.changed = true;
+                    } else {
+                        this.changed = false;
+                    }
+                } else {
+                    console.error("widgetElement is undefined!");
+                }
+                console.log(this.getValue());
+            });
         }
     }
     addTooltip(tooltipText) {
-        // TODO: this function is already called appropriately, just needs code
+        // TODO: probably change this to a custom attribute to be able to use custom styling
+        this.baseElement.setAttribute("title", tooltipText);
     }
     addContainer(container) {
         this.containers.push(container); //on widget value change, call container.check()
@@ -295,8 +372,12 @@ class Widget {
         return !this.isDisabled;
     }
     getValue() {
-        // handle type conversion like Number()
-        if (type === "checkbox") return this.htmlElement.value;
+        // handle type conversion like Number()?
+        if (this.type == "dropdown" || this.type == "textbox") {
+            return this.widgetElement.value;
+        } else if (this.type == "checkbox") {
+            return this.widgetElement.checked;
+        }
     }
 }
 
@@ -308,7 +389,7 @@ function loadFile() {
         reader.onload = function (event) {
             var full_text = this.result; //event.target.result
             var re =
-                /^(?<whitespace>[ \t]*)(?:(?<is_block_comment>\/\*\*|\*\/|\*)|(?:(?<is_line_comment>\/\/)?(?:=*(?<equals_header>(?<=[=])[\w >\/\-()]*(?=[=]))=*)?(?:[ ]?@section[ ](?<at_header>(?<=@section )[\w ]*))?)(?:(?<end_of_line>$)|(?<has_hashtag>#)?(?<pragma_line>pragma \w*)?(?:(?<if_statement>ifndef|ifdef|if|elif)[ ](?:(?<enabled_type>ENABLED|DISABLED|EITHER|ANY|BOTH|ALL)[(](?<enabled_type_vars>(?<=[(]).*(?=[)]))[)]|(?<condition_variable>\w*)[ ]?(?<operator>[<>(]*)?[ ]?(?<condition_value>\w*)?[)]?))?(?:(?<is_define>define)[ ]?(?<variable>\w*)(?<space_from_var_to_next>[ ]*)(?<has_bracket>[{])?(?<has_paren>[(])?(?<has_quote>[\"\'])?[ ]?(?<value>(?:(?<=[{][ ]?)(?:(?!\/\/).)*(?=\})|(?:(?<=[(])(?:(?!\/\/).)*(?=\))|(?:(?<=[\"\']).*?(?:(?=\")|(?=\'))|[-.\w]*))))[})\"\']?)?(?<endif>endif)?(?<space_to_comment>[ ]*)(?<has_line_end_comment>\/\/)?))[ ]?(?::\[)?(?<special_comment_line>(?<=:\[).*(?=\]))?\]?(?<comment_text>.*)?/;
+                /^(?<whitespace>[ \t]*)(?:(?<is_block_comment>\/\*\*|\*\/|\*)|(?:(?<is_line_comment>\/\/)?(?:=*(?<equals_header>(?<=[=])[\w >\/\-()]*(?=[=]))=*)?(?:[ ]?@section[ ](?<at_header>(?<=@section )[\w ]*))?)(?:(?<end_of_line>$)|(?<has_hashtag>#)?(?<pragma_line>pragma \w*)?(?:(?<if_statement>ifndef|ifdef|if|elif)[ ](?:(?<enabled_type>ENABLED|DISABLED|EITHER|ANY|BOTH|ALL)[(](?<enabled_type_vars>(?<=[(]).*(?=[)]))[)]|(?<condition_variable>\w*)[ ]?(?<operator>[<>(]*)?[ ]?(?<condition_value>\w*)?[)]?))?(?:(?<is_define>define)[ ]?(?<variable>\w*)(?<space_from_var_to_next>[ ]*)(?<has_bracket>[{])?(?<has_paren>[(])?(?<has_quote>[\"\'])?[ ]?(?<value>(?:(?<=[{][ ]?)(?:(?!\/\/).)*(?=\})|(?:(?<=[(])(?:(?!\/\/).)*(?=\))|(?:(?<=[\"\']).*?(?:(?=\")|(?=\'))|[-.\w]*))))[})\"\']?)?(?<endif>endif)?(?<space_to_comment>[ ]*)(?<has_line_end_comment>\/\/)?))[ ]?(?::[\[{][ ]?(?<special_comment_line>.*[^ ])[ ]?[\]}])?(?<comment_text>.*)?/;
             // https://regex101.com/r/3GU3om
             // [(]@.*?\n[ ]*[)][?]   < use in Notepad++ replace all
             var lines = full_text.split(/\r\n|\n/);
@@ -318,11 +399,11 @@ function loadFile() {
                 matches.push(lineObject);
             });
             //make_widgets(matches);
-            let elements = make_widgets2(matches);
-            for (const element of elements) {
+            let widgetObjects = make_widgets2(matches);
+            for (const widgetObject of widgetObjects) {
                 document
                     .getElementById("container")
-                    .appendChild(element.htmlElement);
+                    .appendChild(widgetObject.baseElement);
                 document
                     .getElementById("container")
                     .appendChild(document.createElement("br"));
@@ -368,12 +449,12 @@ function make_widgets2(lines) {
     let count = 0;
     for (const [index, line] of lines.entries()) {
         if (line.isBlockComment) {
-            if (line.isBlockComment === "/**") {
+            if (line.isBlockComment == "/**") {
                 blockLabel = new Label("block");
-            } else if (line.isBlockComment === "*") {
+            } else if (line.isBlockComment == "*") {
                 if (line.dropdownOptions) {
                     console.log(
-                        index + " - Found dropdown options in block comment."
+                        "Line " + index + " - Found dropdown options in block comment."
                     );
                     blockCommentDropdownOptions = line.dropdownOptions;
                 } else {
@@ -385,7 +466,7 @@ function make_widgets2(lines) {
                         }
                     }
                 }
-            } else if (line.isBlockComment === "*/") {
+            } else if (line.isBlockComment == "*/") {
                 if (blockLabel === null) {
                     console.error("Block comment label does not exist.");
                 } else {
@@ -395,15 +476,22 @@ function make_widgets2(lines) {
                 }
             }
         } else if (line.isLineComment && !line.isDefine) {
-            let lineLabel = null;
-            if (line.atHeader) {
-                lineLabel = new Label("at_header", line.atHeader);
-            } else if (line.equalsHeader) {
-                lineLabel = new Label("equals_header", line.equalsHeader);
+            if (line.dropdownOptions) {
+                console.log(
+                    "Line " + index + " - Found dropdown options in line comment."
+                );
+                blockCommentDropdownOptions = line.dropdownOptions;
             } else {
-                lineLabel = new Label("line", line.commentText);
+                let lineLabel = null;
+                if (line.atHeader) {
+                    lineLabel = new Label("at_header", line.atHeader);
+                } else if (line.equalsHeader) {
+                    lineLabel = new Label("equals_header", line.equalsHeader);
+                } else {
+                    lineLabel = new Label("line", line.commentText);
+                }
+                htmlElements.push(lineLabel);
             }
-            htmlElements.push(lineLabel);
         } else if (line.pragmaLine) {
             let pragma_label = new Label("line", line.rawLine);
             htmlElements.push(pragma_label);
@@ -411,59 +499,59 @@ function make_widgets2(lines) {
             let newContainer = new HideableContainer();
             count++;
             if (line.enabledType || line.ifStatement == "ifdef" || line.ifStatement == "ifndef") {
-				let lineEnabledType = null;
+                let lineEnabledType = null;
                 let lineEnabledTypeVars = null;
                 if (line.ifStatement == "ifdef") {
                     lineEnabledType = "ENABLED";
-                    lineEnabledTypeVars = line.conditionVariable;
+                    lineEnabledTypeVars = [line.conditionVariable];
                 } else if (line.ifStatement == "ifndef") {
                     lineEnabledType = "DISABLED";
-                    lineEnabledTypeVars = line.conditionVariable;
+                    lineEnabledTypeVars = [line.conditionVariable];
                 } else {
                     lineEnabledType = line.enabledType;
                     lineEnabledTypeVars = line.enabledTypeVars;
                 }
                 console.log("If statement enabled type: " + lineEnabledType + ", variable: " + lineEnabledTypeVars);
-				newContainer.setCondition({
+                newContainer.setCondition({
                     type: "enabledType",
                     enabledType: lineEnabledType,
                     enabledTypeVars: lineEnabledTypeVars
                 });
-                if (line.enabledTypeVars !== undefined) {
-                    for (const typeVariable of line.enabledTypeVars) {
+                if (lineEnabledTypeVars !== undefined) {
+                    for (const typeVariable of lineEnabledTypeVars) {
                         let foundWidget = variableWidgetPairs[typeVariable];
                         if (foundWidget === undefined) {
                             // TODO: this is not necessarily unwanted behavior, line 74 MOTHERBOARD is not defined beforehand
                             console.error(
                                 "If statement variable (enabled type) has not been defined yet!: " +
-                                    typeVariable
+                                typeVariable
                             );
                         } else {
                             console.log(
                                 count +
-                                    " - Successfully found if statement variable (enabled type): " +
-                                    typeVariable
+                                " - Successfully found if statement variable (enabled type): " +
+                                typeVariable
                             );
                             foundWidget.addContainer(newContainer);
-                            newContainer.addConditionWidget(
-                                foundWidget.htmlElement
-                            );
+                            newContainer.addConditionWidget(foundWidget);
                         }
                     }
+                } else {
+                    console.error("Line " + index + " - No enabledTypeVars for this line!");
                 }
 
             } else {
-				let foundWidget = variableWidgetPairs[line.conditionVariable];
+                let foundWidget = variableWidgetPairs[line.conditionVariable];
                 if (foundWidget === undefined) {
                     console.error(
                         "If statement variable (condition type) has not been defined yet!: " +
-                            line.conditionVariable
+                        line.conditionVariable
                     );
                 } else {
                     console.log(
                         count +
-                            " - Successfully found if statement variable (condition type): " +
-                            line.conditionVariable
+                        " - Successfully found if statement variable (condition type): " +
+                        line.conditionVariable
                     );
                     foundWidget.addContainer(newContainer);
                     newContainer.addConditionWidget(foundWidget);
@@ -482,24 +570,24 @@ function make_widgets2(lines) {
                     });
                 }
             }
-            //newContainer.checkCondition();    //TODO: enable this and fix error
+            newContainer.checkCondition();    //TODO: enable this and fix error
             if (line.ifStatement == "elif") {
                 if (hideableContainers.pop() === undefined) {
-                    console.error(index + " - hideableContainers already empty!");
+                    console.error("Line " + index + " - hideableContainers already empty!");
                 }
             }
             hideableContainers.push(newContainer);
             if (hideableContainers.length > 1) {
-                console.log(index + " - adding hideableContainer to parent container");
-                hideableContainers[hideableContainers.length - 2].addElement(hideableContainers[hideableContainers.length - 1].htmlElement);
+                console.log("Line " + index + " - adding hideableContainer to parent container");
+                hideableContainers[hideableContainers.length - 2].addElement(hideableContainers[hideableContainers.length - 1].baseElement);
             } else {
                 htmlElements.push(hideableContainers[hideableContainers.length - 1]);
             }
-            
+
             // to get last: hideableContainers[hideableContainers.length - 1]
         } else if (line.endif) {
             if (hideableContainers.pop() === undefined) {
-                console.error(index + " - More endifs than ifs!");
+                console.error("Line " + index + " - More endifs than ifs!");
             }
         } else if (line.isDefine) {
             count++;
@@ -508,7 +596,7 @@ function make_widgets2(lines) {
             if (line.isLineComment) {
                 isDisabled = true;
             }
-            if (lastBlockCommentDropdownOptions !== null) {
+            if (lastBlockCommentDropdownOptions !== null) { // if everything after first underscore is the same as last variable, use same dropdown options
                 if (lastVariableName.indexOf("_") > -1 && line.variable.endsWith(lastVariableName.slice(lastVariableName.indexOf("_")))) {
                     blockCommentDropdownOptions = lastBlockCommentDropdownOptions;
                 } else {
@@ -516,8 +604,6 @@ function make_widgets2(lines) {
                 }
             }
             if (line.dropdownOptions || blockCommentDropdownOptions !== null) {
-                // Also need to check if current variable is similar to one prior, if so check first has a dropdown list and apply same options
-                // lines 90-96: X_DRIVER_TYPE, Y_, Z_, I_, J_, K_, E0_
                 console.log(
                     count + " - Applying dropdown options to " + line.variable
                 );
@@ -538,7 +624,7 @@ function make_widgets2(lines) {
                     variableName: line.variable,
                     value: line.value
                 });
-            } else if (!line.value || line.value === "") {
+            } else if (!line.value || line.value == "") {
                 console.log(count + " - checkbox: " + line.variable);
                 widget = new Widget({
                     type: "checkbox",
@@ -556,7 +642,7 @@ function make_widgets2(lines) {
             } else if (line.hasQuote) {
                 console.log(count + " - textbox: " + line.variable);
                 widget = new Widget({
-                    type: "text_box",
+                    type: "textbox",
                     isDisabled: isDisabled,
                     variableName: line.variable,
                     value: line.value
@@ -574,7 +660,7 @@ function make_widgets2(lines) {
                 widget.addTooltip(line.commentText);
             }
             if (hideableContainers.length > 0) {
-                hideableContainers[hideableContainers.length - 1].addElement(widget.htmlElement);
+                hideableContainers[hideableContainers.length - 1].addElement(widget.baseElement);
             } else {
                 htmlElements.push(widget);
             }
@@ -590,13 +676,13 @@ function make_widgets(items) {
     var count = 0;
     for (const [index, item] of items.entries()) {
         let widget = null;
-        if (item.type === "label") {
+        if (item.type == "label") {
             const standalone = item.isBlockComment !== null;
             const header = item.atHeader !== null || item.equalsHeader !== null;
             widget = document.createElement("label");
             widget.textContent = item.labelText;
             document.getElementById("container").appendChild(widget);
-        } else if (item.type === "checkbox") {
+        } else if (item.type == "checkbox") {
             //const checkbox = new CheckBox(item.enabled);
             //checkbox.title = item.tooltip;    // implement tooltip with CSS
             widget = document.createElement("input");
@@ -617,7 +703,7 @@ function make_widgets(items) {
             document.getElementById("container").appendChild(checkbox_label);
             //const property_name = item.variable;
             //widget = new TreeItemContainer(checkbox, property_name, gui.Container.LAYOUT_HORIZONTAL, { display: "block", overflow: "auto" });
-        } else if (item.type === "text_box") {
+        } else if (item.type == "textbox") {
             widget = document.createElement("input");
             widget.setAttribute("type", "text");
             widget.setAttribute("value", item.value);

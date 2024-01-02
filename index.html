@@ -17,9 +17,9 @@
                                 type="file"
                                 id="file_upload"
                                 accept=".h, .txt"
-                                onchange="loadFile()" />
+                                onchange="loadFile()" />    <!-- TODO: get rid of this, implement in .js instead -->
                         </li>
-                        <li onclick="saveFile()">
+                        <li onclick="saveFile()">   <!-- TODO: get rid of this, implement in .js instead -->
                             Save changes<!-- could have this be italic "No changes detected" at beginning -->
                         </li>
                     </ul>
@@ -41,7 +41,7 @@
                 min="0"
                 max="20"
                 value="0"
-                oninput="amount.value=this.value" />
+                oninput="amount.value=this.value" />  <!-- TODO: get rid of this, implement in .js instead -->
             <output id="amount">0</output>
             <input
                 type="range"
@@ -49,16 +49,14 @@
                 min="0"
                 max="20"
                 value="0"
-                oninput="amountInput.value=this.value" />
+                oninput="amountInput.value=this.value" />  <!-- TODO: get rid of this, implement in .js instead -->
             <input
                 type="number"
                 id="amountInput"
                 min="0"
                 max="20"
                 value="0"
-                oninput="numInput()" />
-            <!--oninput="amountRange.value=this.value"
-oninput="this.value=this.valueAsNumber;this.value < this.min ? this.value = this.min;this.value > this.max ? this.value = this.max"-->
+                oninput="numInput()" />  <!-- TODO: get rid of this, implement in .js instead -->
             <hr />
             <p>Checkbox:</p>
             <input type="checkbox" id="one" value="1" />
