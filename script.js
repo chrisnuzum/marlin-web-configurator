@@ -1,5 +1,6 @@
 /* TODO:
 
+Line 2587, #include statement! - added in Regex so far
 Make comments be added to hideableContainers
 Disable/make readonly/gray out controls that aren't enabled or are in a hideableContainer that isn't active
 Add all of the "other" and "multiple" controls
@@ -9,8 +10,10 @@ Deal with special if statements on lines 160, 164, and 169 (they display now but
 
 /*
 Notes:
+Line 396: should be single quotes?
 Lines 1708 & 2604: problem fixed with regex but maybe a typo in the original document, uses :{ } instead of :[ ]
 Line 3455: should definitely have spaces after commas
+Line 1516 & 1525: should probably be surrounded by parentheses
 */
 
 var matches = []; // probably doesn't need to be global
@@ -286,10 +289,10 @@ class Widget {
                     optionValue = optionValue.slice(0, optionValue.indexOf(":"));
                     optionText = optionText.slice(optionText.indexOf(":") + 1);
                 }
-                if (optionValue.charAt(0) == "'") {
+                if (optionValue.charAt(0) == "'" || optionValue.charAt(0) == '"') {
                     optionValue = optionValue.slice(1, -1);
                 }
-                if (optionText.charAt(0) == "'") {
+                if (optionText.charAt(0) == "'" || optionText.charAt(0) == '"') {
                     optionText = optionText.slice(1, -1);
                 }
                 o.textContent = optionText;
@@ -308,9 +311,15 @@ class Widget {
             this.baseElement.append(dropdownElement);
             this.widgetElement = dropdownElement;
         } else if (type == "textbox") {    // TODO: if over a certain length, probably use <textarea> instead
-            let textbox = document.createElement("input");
-            textbox.setAttribute("type", "text");
-            textbox.setAttribute("value", value);
+            let textbox = null;
+            if (value.length < 40) {
+                textbox = document.createElement("input");
+                textbox.setAttribute("type", "text");
+                textbox.setAttribute("value", value);
+            } else {
+                textbox = document.createElement("textarea");
+                textbox.textContent = value;
+            }
             this.baseElement.append(textbox);
             this.initialValue = value;
             this.widgetElement = textbox;
@@ -344,11 +353,8 @@ class Widget {
         if (this.widgetElement === null) {
             console.error("widgetElement has not been set!");
         } else {
-            this.widgetElement.addEventListener("change", () => {
-                // "this" inside this function refers to the actual HTML element,
-                // NOT the Widget object                
-                if (this.widgetElement !== undefined)
-                {
+            this.widgetElement.addEventListener("change", () => {           
+                if (this.widgetElement !== undefined) {
                     if (this.widgetElement.value !== this.initialValue) {
                         this.changed = true;
                     } else {
@@ -389,7 +395,7 @@ function loadFile() {
         reader.onload = function (event) {
             var full_text = this.result; //event.target.result
             var re =
-                /^(?<whitespace>[ \t]*)(?:(?<is_block_comment>\/\*\*|\*\/|\*)|(?:(?<is_line_comment>\/\/)?(?:=*(?<equals_header>(?<=[=])[\w >\/\-()]*(?=[=]))=*)?(?:[ ]?@section[ ](?<at_header>(?<=@section )[\w ]*))?)(?:(?<end_of_line>$)|(?<has_hashtag>#)?(?<pragma_line>pragma \w*)?(?:(?<if_statement>ifndef|ifdef|if|elif)[ ](?:(?<enabled_type>ENABLED|DISABLED|EITHER|ANY|BOTH|ALL)[(](?<enabled_type_vars>(?<=[(]).*(?=[)]))[)]|(?<condition_variable>\w*)[ ]?(?<operator>[<>(]*)?[ ]?(?<condition_value>\w*)?[)]?))?(?:(?<is_define>define)[ ]?(?<variable>\w*)(?<space_from_var_to_next>[ ]*)(?<has_bracket>[{])?(?<has_paren>[(])?(?<has_quote>[\"\'])?[ ]?(?<value>(?:(?<=[{][ ]?)(?:(?!\/\/).)*(?=\})|(?:(?<=[(])(?:(?!\/\/).)*(?=\))|(?:(?<=[\"\']).*?(?:(?=\")|(?=\'))|[-.\w]*))))[})\"\']?)?(?<endif>endif)?(?<space_to_comment>[ ]*)(?<has_line_end_comment>\/\/)?))[ ]?(?::[\[{][ ]?(?<special_comment_line>.*[^ ])[ ]?[\]}])?(?<comment_text>.*)?/;
+                /^(?<whitespace>[ \t]*)(?:(?<is_block_comment>\/\*\*|\*\/|\*)|(?:(?<is_line_comment>\/\/)?(?:=*(?<equals_header>(?<=[=])[\w >\/\-()]*(?=[=]))=*)?(?:[ ]?@section[ ](?<at_header>(?<=@section )[\w ]*))?)(?:(?<end_of_line>$)|(?<has_hashtag>#)?(?<pragma_line>pragma \w*)?(?:(?<include_statement>include)[ ](?<include_symbol>["<])(?<include_file>.*)[">])?(?:(?<if_statement>ifndef|ifdef|if|elif)[ ](?:(?<enabled_type>ENABLED|DISABLED|EITHER|ANY|BOTH|ALL)[(](?<enabled_type_vars>(?<=[(]).*(?=[)]))[)]|(?<condition_variable>\w*)[ ]?(?<operator>[<>(]*)?[ ]?(?<condition_value>\w*)?[)]?))?(?:(?<is_define>define)[ ]?(?<variable>\w*)(?<space_from_var_to_next>[ ]*)(?<has_bracket>[{])?(?<has_paren>[(])?(?<has_quote>[\"\'])?[ ]?(?<value>(?:(?:(?!\/\/).)*\S(?:(?=[ ]?\}|\"|\'|\)[ ]|\)$))|(?:(?!\/\/)\S)*))(?:[ ]?[})\"\'])?)?(?<endif>endif)?(?<space_to_comment>[ ]*)(?<has_line_end_comment>\/\/)?))[ ]?(?::[\[{][ ]?(?<special_comment_line>.*[^ ])[ ]?[\]}])?(?<comment_text>.*)?/;
             // https://regex101.com/r/3GU3om
             // [(]@.*?\n[ ]*[)][?]   < use in Notepad++ replace all
             var lines = full_text.split(/\r\n|\n/);
