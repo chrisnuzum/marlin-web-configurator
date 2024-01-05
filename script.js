@@ -1,6 +1,6 @@
 /* TODO:
 
-Line 2587, #include statement! - added in Regex so far
+Deal with line 1516 & 1525
 Make comments be added to hideableContainers
 Disable/make readonly/gray out controls that aren't enabled or are in a hideableContainer that isn't active
 Add all of the "other" and "multiple" controls
@@ -30,6 +30,9 @@ class Line {
 
         this.hasHashtag = regex_match.groups.has_hashtag;
         this.pragmaLine = regex_match.groups.pragma_line;
+        this.includeStatement = regex_match.groups.include_statement;
+        this.includeSymbol = regex_match.groups.include_symbol;
+        this.includeFile = regex_match.groups.include_file;
 
         this.ifStatement = regex_match.groups.if_statement; // ifndef|ifdef|if|elif
         /*
@@ -249,6 +252,7 @@ class Widget {
         type = "other",
         isDisabled = false,
         dropdownOptions = [],
+        surroundingCharacter = null,
         variableName,
         value
     } = {}) {
@@ -259,6 +263,7 @@ class Widget {
         this.widgetElement = null;
         this.isDisabled = isDisabled;
         this.containers = [];
+        this.surroundingCharacter = surroundingCharacter;
         this.initialValue = null;
         this.changed = false;
         if (isDisabled == true || type == "checkbox") {
@@ -324,20 +329,31 @@ class Widget {
             this.initialValue = value;
             this.widgetElement = textbox;
         } else if (type == "multiple") {
-            /*
-            Possible values:
+            /* Possible values:
             { 0, 90 }
             { 80, 80, 400, 93 }
-            (133*60)
             { PROBE_DEPLOY_FEEDRATE, { 245, 114, 30 } }
             { (X_BED_SIZE) * 3 / 4 - (CLIP_W) / 2, (Y_BED_SIZE) - (CLIP_H), (X_BED_SIZE) * 3 / 4 + (CLIP_W) / 2, Y_BED_SIZE }
-            ((CLIP_H) + 1)
             { (50*60), (50*60), (4*60) }
             { 698, 300, 0, 50, 523, 50, 0, 25, 494, 50, 0, 25, 523, 100, 0, 50, 554, 300, 0, 100, 523, 300 }
             */
+           let values = value.split(", ");
+            for (const _value of values) {
+                if (_value.charAt(0) == '{' && _value.charAt(_value.length - 1) == '}') {
+                    let subValues = _value.split(", ");
+                    for (const _val of subValues)
+                    {
+                        
+                    }
+                } else {
+                    
+                }
+            }
         } else if (type == "other") {
-            /*
-            Possible values:
+            /* Possible values:
+            (133*60)
+            ((CLIP_H) + 1)
+            (XY_PROBE_FEEDRATE)/10
             02010300
             Version.h
             BOARD_BTT_SKR_MINI_E3_V3_0
@@ -481,7 +497,7 @@ function make_widgets2(lines) {
                     blockLabel = null;
                 }
             }
-        } else if (line.isLineComment && !line.isDefine) {
+        } else if (line.isLineComment && !line.isDefine && !line.includeStatement) {
             if (line.dropdownOptions) {
                 console.log(
                     "Line " + index + " - Found dropdown options in line comment."
@@ -595,7 +611,10 @@ function make_widgets2(lines) {
             if (hideableContainers.pop() === undefined) {
                 console.error("Line " + index + " - More endifs than ifs!");
             }
-        } else if (line.isDefine) {
+        } else if (line.isDefine || line.includeStatement) {
+            if (line.includeStatement) {
+                console.log("Found include statement");
+            }
             count++;
             var widget = null;
             var isDisabled = false;
@@ -630,14 +649,7 @@ function make_widgets2(lines) {
                     variableName: line.variable,
                     value: line.value
                 });
-            } else if (!line.value || line.value == "") {
-                console.log(count + " - checkbox: " + line.variable);
-                widget = new Widget({
-                    type: "checkbox",
-                    isDisabled: isDisabled,
-                    variableName: line.variable
-                });
-            } else if (line.hasBracket || line.hasParentheses) {
+            } else if (line.hasBracket) {
                 console.log(count + " - multiple: " + line.variable);
                 widget = new Widget({
                     type: "multiple",
@@ -645,13 +657,38 @@ function make_widgets2(lines) {
                     variableName: line.variable,
                     value: line.value
                 });
-            } else if (line.hasQuote) {
+            } else if (line.hasParentheses) {
+                if (line.commentText !== undefined && line.commentText.endsWith("/10")) { // special case to account for lines 1516 & 1525
+                    widget = new Widget({
+                        type: "other",
+                        isDisabled: isDisabled,
+                        variableName: line.variable,
+                        value: line.value + line.commentText
+                    });
+                } else {
+                    widget = new Widget({
+                        type: "other",
+                        isDisabled: isDisabled,
+                        surroundingCharacter: line.hasParentheses,
+                        variableName: line.variable,
+                        value: line.value + line.commentText
+                    });
+                }
+            } else if (line.hasQuote || line.includeStatement) {
                 console.log(count + " - textbox: " + line.variable);
                 widget = new Widget({
                     type: "textbox",
                     isDisabled: isDisabled,
-                    variableName: line.variable,
-                    value: line.value
+                    surroundingCharacter: line.hasQuote ? line.hasQuote : line.includeSymbol,
+                    variableName: line.hasQuote ? line.variable : "#include",
+                    value: line.hasQuote ? line.value : line.includeFile
+                });
+            } else if (!line.value || line.value == "") {
+                console.log(count + " - checkbox: " + line.variable);
+                widget = new Widget({
+                    type: "checkbox",
+                    isDisabled: isDisabled,
+                    variableName: line.variable
                 });
             } else {
                 console.log(count + " - other: " + line.variable);
