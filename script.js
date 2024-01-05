@@ -1,10 +1,17 @@
 /* TODO:
 
 Deal with line 1516 & 1525
-Make comments be added to hideableContainers
-Disable/make readonly/gray out controls that aren't enabled or are in a hideableContainer that isn't active
+
 Add all of the "other" and "multiple" controls
-Deal with special if statements on lines 160, 164, and 169 (they display now but might cause errors when checking for conditions)
+Deal with special if statements on lines 160, 164, and 169 (581) (they display now but might cause errors when checking for conditions)
+Check why line 25 (MOTHERBOARD) isn't expanded automatically
+2 line comments one after another are placed directly next to each other. This is fine because long comments were split to multiple lines but it should add a space if the second starts with a lowercase letter.
+Should I store current value of widget in Widget object or just use getValue() always?
+Need to implement saving the file
+
+Style:
+Disable/make readonly/gray out controls that aren't enabled or are in a hideableContainer that isn't active
+Line 2759-2760, 2911-2912: double equals header
 
 */
 
@@ -12,8 +19,15 @@ Deal with special if statements on lines 160, 164, and 169 (they display now but
 Notes:
 Line 396: should be single quotes?
 Lines 1708 & 2604: problem fixed with regex but maybe a typo in the original document, uses :{ } instead of :[ ]
-Line 3455: should definitely have spaces after commas
+Line 3455, 3467: should definitely have spaces after commas
 Line 1516 & 1525: should probably be surrounded by parentheses
+Line 581, 585, 589
+Line 594
+Line 3352, 3363, 3372, 3391: should have dropdown options listed
+Line 3396: 1 space around equals header text
+Line 3333-3334, 3337-3340, 3402-3406: should these be 1 option with dropdown? also check 3242>3136-3148
+
+Anything disableable should have comment about default value?
 */
 
 var matches = []; // probably doesn't need to be global
@@ -22,13 +36,13 @@ class Line {
     // this object should just hold the line info, and should break down any piece that needs further broken down
     constructor(regex_match) {
         this.rawLine = regex_match[0];
-        this.beginWhitespace = regex_match.groups.whitespace;
-        this.isBlockComment = regex_match.groups.is_block_comment;
-        this.isLineComment = regex_match.groups.is_line_comment;
+        this.beginWhitespace = regex_match.groups.initial_whitespace;
+        this.isBlockComment = regex_match.groups.block_comment;
+        this.isLineComment = regex_match.groups.line_comment;
         this.equalsHeader = regex_match.groups.equals_header;
         this.atHeader = regex_match.groups.at_header;
 
-        this.hasHashtag = regex_match.groups.has_hashtag;
+        this.hasHashtag = regex_match.groups.hashtag;
         this.pragmaLine = regex_match.groups.pragma_line;
         this.includeStatement = regex_match.groups.include_statement;
         this.includeSymbol = regex_match.groups.include_symbol;
@@ -43,7 +57,7 @@ class Line {
         
         if VAR_NAME
         */
-        this.enabledType = regex_match.groups.enabled_type; // ENABLED|DISABLED|ANY|ALL|BOTH|EITHER (last 2 not used anymore)
+        this.enabledType = regex_match.groups.enabled_type; // ENABLED|DISABLED|ALL|ANY|BOTH|EITHER (last 2 not used anymore)
         if (regex_match.groups.enabled_type_vars !== undefined) {
             this.enabledTypeVars =
                 regex_match.groups.enabled_type_vars.split(", ");
@@ -52,18 +66,19 @@ class Line {
         }
 
         this.conditionVariable = regex_match.groups.condition_variable; // line 594 has condition_variable with no operator or value
-        this.operator = regex_match.groups.operator; // <,>,=,(  inside parentheses is basically just = (= no longer used)
+        this.operator = regex_match.groups.operator; // <,>,(  inside parentheses is basically just = (= no longer used)
         this.conditionValue = regex_match.groups.condition_value;
+        this.else = regex_match.groups.else;
+        this.endif = regex_match.groups.endif;
 
-        this.isDefine = regex_match.groups.is_define;
+        this.isDefine = regex_match.groups.define;
         this.variable = regex_match.groups.variable;
-        this.spaceFromVarToNext = regex_match.groups.space_from_var_to_next;
+        this.spaceFromVarToNext = regex_match.groups.space_var_to_value;
         this.hasBracket = regex_match.groups.has_bracket;
         this.hasParentheses = regex_match.groups.has_paren;
         this.hasQuote = regex_match.groups.has_quote;
         this.value = regex_match.groups.value; // regex this to determine what type of variable it is
 
-        this.endif = regex_match.groups.endif;
         this.spaceToComment = regex_match.groups.space_to_comment;
         this.hasLineEndComment = regex_match.groups.has_line_end_comment;
 
@@ -261,12 +276,18 @@ class Widget {
         this.baseElement = document.createElement("div");
         this.baseElement.setAttribute("class", "widgetBase");
         this.widgetElement = null;
+        this.extraCheckboxElement = null;
         this.isDisabled = isDisabled;
         this.containers = [];
         this.surroundingCharacter = surroundingCharacter;
         this.initialValue = null;
-        this.changed = false;
+        this.changed = false;   // TODO: for lines with both checkbox and widget, this isn't working
         if (isDisabled == true || type == "checkbox") {
+            /* 
+            If type == "checkbox", there is no value (#define BAUD_RATE_GCODE)
+                isDisabled could be true or false
+            If type is anything else, a checkbox should only be added when isDisabled == true
+            */
             let checkbox = document.createElement("input");
             checkbox.setAttribute("type", "checkbox");
             if (isDisabled == false) {
@@ -277,6 +298,8 @@ class Widget {
             this.baseElement.append(checkbox);
             if (type == "checkbox") {
                 this.widgetElement = checkbox;
+            } else {
+                this.extraCheckboxElement = checkbox;
             }
         }
         let label = document.createElement("label");
@@ -337,16 +360,41 @@ class Widget {
             { (50*60), (50*60), (4*60) }
             { 698, 300, 0, 50, 523, 50, 0, 25, 494, 50, 0, 25, 523, 100, 0, 50, 554, 300, 0, 100, 523, 300 }
             */
-           let values = value.split(", ");
-            for (const _value of values) {
+            this.initialValue = 1; // TODO: this is just a placeholder
+            let values = value.split(", ");
+            for (const _value1 of values) {
+                let _value = _value1.trim();
                 if (_value.charAt(0) == '{' && _value.charAt(_value.length - 1) == '}') {
+                    // TODO: remove beginning and ending character
                     let subValues = _value.split(", ");
-                    for (const _val of subValues)
-                    {
-                        
+                    for (const _val1 of subValues) {
+                        let _val = _val1.trim();
+                        if (/^-?\d+$/.test(_val)) { // 90 or -2, etc.
+                            let numInput = document.createElement("input");
+                            numInput.setAttribute("type", "number");
+                            numInput.setAttribute("value", _val);
+                            this.baseElement.append(numInput);
+                            this.widgetElement = numInput; // TODO: this is just a placeholder
+                        } else {
+                            let textbox = document.createElement("input");
+                            textbox.setAttribute("type", "text");
+                            textbox.setAttribute("value", _val);
+                            this.baseElement.append(numInput);
+                        }
                     }
                 } else {
-                    
+                    if (/^-?\d+$/.test(_value)) { // 90 or -2, etc.
+                        let numInput = document.createElement("input");
+                        numInput.setAttribute("type", "number");
+                        numInput.setAttribute("value", _value);
+                        this.baseElement.append(numInput);
+                        this.widgetElement = numInput; // TODO: this is just a placeholder
+                    } else {
+                        let textbox = document.createElement("input");
+                        textbox.setAttribute("type", "text");
+                        textbox.setAttribute("value", _value);
+                        this.baseElement.append(textbox);
+                    }
                 }
             }
         } else if (type == "other") {
@@ -366,20 +414,43 @@ class Widget {
         if (this.initialValue === null) {
             console.error("widget initial value has not been set!");
         }
-        if (this.widgetElement === null) {
-            console.error("widgetElement has not been set!");
-        } else {
-            this.widgetElement.addEventListener("change", () => {           
+        if (this.widgetElement !== null) {
+            this.widgetElement.addEventListener("change", () => {
                 if (this.widgetElement !== undefined) {
-                    if (this.widgetElement.value !== this.initialValue) {
+                    if (this.getValue() !== this.initialValue) {
                         this.changed = true;
                     } else {
                         this.changed = false;
+                    }
+                    if (this.type == "checkbox") {
+                        if (this.widgetElement.checked) {
+                            this.isDisabled = false;
+                        } else {
+                            this.isDisabled = true;
+                        }
                     }
                 } else {
                     console.error("widgetElement is undefined!");
                 }
                 console.log(this.getValue());
+                for (const container of this.containers) {
+                    container.checkCondition();
+                }
+            });
+        } else {
+            console.error("widgetElement has not been set!");
+        }
+        if (this.extraCheckboxElement !== null) {
+            this.extraCheckboxElement.addEventListener("change", () => {
+                console.log(this.extraCheckboxElement.checked);
+                if (this.extraCheckboxElement.checked) {
+                    this.isDisabled = false;
+                } else {
+                    this.isDisabled = true;
+                }
+                for (const container of this.containers) {
+                    container.checkCondition();
+                }
             });
         }
     }
@@ -411,7 +482,7 @@ function loadFile() {
         reader.onload = function (event) {
             var full_text = this.result; //event.target.result
             var re =
-                /^(?<whitespace>[ \t]*)(?:(?<is_block_comment>\/\*\*|\*\/|\*)|(?:(?<is_line_comment>\/\/)?(?:=*(?<equals_header>(?<=[=])[\w >\/\-()]*(?=[=]))=*)?(?:[ ]?@section[ ](?<at_header>(?<=@section )[\w ]*))?)(?:(?<end_of_line>$)|(?<has_hashtag>#)?(?<pragma_line>pragma \w*)?(?:(?<include_statement>include)[ ](?<include_symbol>["<])(?<include_file>.*)[">])?(?:(?<if_statement>ifndef|ifdef|if|elif)[ ](?:(?<enabled_type>ENABLED|DISABLED|EITHER|ANY|BOTH|ALL)[(](?<enabled_type_vars>(?<=[(]).*(?=[)]))[)]|(?<condition_variable>\w*)[ ]?(?<operator>[<>(]*)?[ ]?(?<condition_value>\w*)?[)]?))?(?:(?<is_define>define)[ ]?(?<variable>\w*)(?<space_from_var_to_next>[ ]*)(?<has_bracket>[{])?(?<has_paren>[(])?(?<has_quote>[\"\'])?[ ]?(?<value>(?:(?:(?!\/\/).)*\S(?:(?=[ ]?\}|\"|\'|\)[ ]|\)$))|(?:(?!\/\/)\S)*))(?:[ ]?[})\"\'])?)?(?<endif>endif)?(?<space_to_comment>[ ]*)(?<has_line_end_comment>\/\/)?))[ ]?(?::[\[{][ ]?(?<special_comment_line>.*[^ ])[ ]?[\]}])?(?<comment_text>.*)?/;
+                /^(?<initial_whitespace>[ \t]+)?(?:(?<block_comment>\/\*\*|\*\/|\*)|(?:(?<line_comment>\/\/)?(?:=+[ ]*(?<equals_header>[\w >\/\-()]*[^ =])?[ ]*=+)?(?:[ ]@section[ ](?<at_header>[\w ]*))?)(?:(?<hashtag>#)(?:(?<pragma_line>pragma once)|(?:(?<include_statement>include)[ ](?<include_symbol>["<])(?<include_file>.+)[">])|(?:(?<if_statement>if|elif|ifdef|ifndef)[ ](?:(?<enabled_type>ENABLED|DISABLED|ALL|ANY|BOTH|EITHER)[(](?<enabled_type_vars>.+)[)]|(?<condition_variable>\w+)(?:[ ]?(?<operator>[<>(])[ ]?(?<condition_value>\w+)[)]?)?))|(?<else>else)|(?<endif>endif)|(?:(?<define>define)[ ](?<variable>\w+)(?:(?<space_var_to_value>[ ]*(?![ ]*\/\/))(?<has_bracket>[{])?(?<has_paren>[(])?(?<has_quote>[\"\'])?[ ]?(?<value>(?:(?!\/\/).)*\S(?=[ ]?\}|\"|\'|\)[ ]|\)$)|(?:(?!\/\/)\S)+)(?:[ ]?[})\"\'])?)?))(?<space_to_comment>[ ]*)(?<has_line_end_comment>\/\/)?)?)[ ]?(?::[\[{][ ]?(?<special_comment_line>.+[^ ])[ ]?[\]}][ ]?)?(?<comment_text>.*)?/;
             // https://regex101.com/r/3GU3om
             // [(]@.*?\n[ ]*[)][?]   < use in Notepad++ replace all
             var lines = full_text.split(/\r\n|\n/);
@@ -461,7 +532,7 @@ function make_widgets2(lines) {
      *                  line_comment? >
      */
     var htmlElements = [];
-    var hideableContainers = [];
+    var hideableContainers = [];  // if length > 0 then currently inside an if block
     var variableWidgetPairs = {}; // store string of define variable and corresponding widget that can be searched when if statements are encountered later
     // in order to add the hideable container to the corresponding variable widget so {"SINGLE_NOZZLE": checkboxobject}
     let blockLabel = null;
@@ -493,7 +564,11 @@ function make_widgets2(lines) {
                     console.error("Block comment label does not exist.");
                 } else {
                     blockLabel.finalize();
-                    htmlElements.push(blockLabel);
+                    if (hideableContainers.length > 0) {
+                        hideableContainers[hideableContainers.length - 1].addElement(blockLabel.baseElement);
+                    } else {
+                        htmlElements.push(blockLabel);
+                    }
                     blockLabel = null;
                 }
             }
@@ -512,7 +587,11 @@ function make_widgets2(lines) {
                 } else {
                     lineLabel = new Label("line", line.commentText);
                 }
-                htmlElements.push(lineLabel);
+                if (hideableContainers.length > 0) {
+                    hideableContainers[hideableContainers.length - 1].addElement(lineLabel.baseElement);
+                } else {
+                    htmlElements.push(lineLabel);
+                }
             }
         } else if (line.pragmaLine) {
             let pragma_label = new Label("line", line.rawLine);
@@ -784,16 +863,16 @@ function saveFile() {
     a.click();
 }
 
-function numInput() {
-    var slider = document.getElementById("amountRange");
-    var numBox = document.getElementById("amountInput");
-    var inputNumberStart = numBox.valueAsNumber;
-    var inputNumber = 0;
-    if (inputNumberStart < numBox.getAttribute("min"))
-        inputNumber = numBox.getAttribute("min");
-    else if (inputNumberStart > numBox.getAttribute("max"))
-        inputNumber = numBox.getAttribute("max");
-    else inputNumber = inputNumberStart;
-    numBox.value = inputNumber;
-    slider.value = inputNumber;
-}
+// function numInput() {
+//     var slider = document.getElementById("amountRange");
+//     var numBox = document.getElementById("amountInput");
+//     var inputNumberStart = numBox.valueAsNumber;
+//     var inputNumber = 0;
+//     if (inputNumberStart < numBox.getAttribute("min"))
+//         inputNumber = numBox.getAttribute("min");
+//     else if (inputNumberStart > numBox.getAttribute("max"))
+//         inputNumber = numBox.getAttribute("max");
+//     else inputNumber = inputNumberStart;
+//     numBox.value = inputNumber;
+//     slider.value = inputNumber;
+// }

@@ -157,6 +157,8 @@
   #endif
 #endif
 
+#define TEMP_SENSOR_IS_MAX_TC 2  // I added this for testing
+
 #if TEMP_SENSOR_IS_MAX_TC(1)
   #define MAX31865_SENSOR_OHMS_1      100
   #define MAX31865_CALIBRATION_OHMS_1 430
