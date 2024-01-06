@@ -29,6 +29,9 @@ Line 3333-3334, 3337-3340, 3402-3406: should these be 1 option with dropdown? al
 
 Anything disableable should have comment about default value?
 */
+var DEBUG_WIDGET_TYPES = false;
+var DEBUG_WIDGET_ERRORS = false;
+var DEBUG_CURRENT_MESSAGES = true;
 
 var matches = []; // probably doesn't need to be global
 
@@ -291,7 +294,9 @@ class Widget {
             let checkbox = document.createElement("input");
             checkbox.setAttribute("type", "checkbox");
             if (isDisabled == false) {
-                console.log("Checkbox disabled = false: " + variableName);
+                if (DEBUG_WIDGET_TYPES) {
+                    console.log("Checkbox disabled = false: " + variableName);
+                }
                 checkbox.setAttribute("checked", "");
                 this.initialValue = true;
             }
@@ -344,6 +349,7 @@ class Widget {
                 textbox = document.createElement("input");
                 textbox.setAttribute("type", "text");
                 textbox.setAttribute("value", value);
+                textbox.setAttribute("size", value.length);
             } else {
                 textbox = document.createElement("textarea");
                 textbox.textContent = value;
@@ -362,39 +368,41 @@ class Widget {
             */
             this.initialValue = 1; // TODO: this is just a placeholder
             let values = value.split(", ");
-            for (const _value1 of values) {
-                let _value = _value1.trim();
-                if (_value.charAt(0) == '{' && _value.charAt(_value.length - 1) == '}') {
-                    // TODO: remove beginning and ending character
-                    let subValues = _value.split(", ");
-                    for (const _val1 of subValues) {
-                        let _val = _val1.trim();
-                        if (/^-?\d+$/.test(_val)) { // 90 or -2, etc.
-                            let numInput = document.createElement("input");
-                            numInput.setAttribute("type", "number");
-                            numInput.setAttribute("value", _val);
-                            this.baseElement.append(numInput);
-                            this.widgetElement = numInput; // TODO: this is just a placeholder
-                        } else {
-                            let textbox = document.createElement("input");
-                            textbox.setAttribute("type", "text");
-                            textbox.setAttribute("value", _val);
-                            this.baseElement.append(numInput);
-                        }
-                    }
+            for (let _value of values) {
+                _value = _value.trim();
+                let endBracket = false;
+                if (DEBUG_CURRENT_MESSAGES) console.log("current _value: " + _value);
+                if (_value.charAt(0) == '{') {
+                    let bracketLabel = document.createElement("label");
+                    bracketLabel.textContent = "{";
+                    this.baseElement.append(bracketLabel);
+                    if (DEBUG_CURRENT_MESSAGES) console.log("Value before slice: " + _value);
+                    _value = _value.slice(1).trim();
+                    if (DEBUG_CURRENT_MESSAGES) console.log("Value after slice: " + _value);
+                } else if (_value.charAt(_value.length - 1) == '}') {
+                    endBracket = true;
+                    if (DEBUG_CURRENT_MESSAGES) console.log("Value before slice: " + _value);
+                    _value = _value.slice(0, -1).trim();
+                    if (DEBUG_CURRENT_MESSAGES) console.log("Value after slice: " + _value);
+                }
+                if (/^-?\d+$/.test(_value)) { // 90 or -2, etc.
+                    let numInput = document.createElement("input");
+                    numInput.setAttribute("type", "number");
+                    numInput.setAttribute("value", _value);
+                    numInput.setAttribute("size", _value.length + 3);
+                    this.baseElement.append(numInput);
+                    this.widgetElement = numInput; // TODO: this is just a placeholder
                 } else {
-                    if (/^-?\d+$/.test(_value)) { // 90 or -2, etc.
-                        let numInput = document.createElement("input");
-                        numInput.setAttribute("type", "number");
-                        numInput.setAttribute("value", _value);
-                        this.baseElement.append(numInput);
-                        this.widgetElement = numInput; // TODO: this is just a placeholder
-                    } else {
-                        let textbox = document.createElement("input");
-                        textbox.setAttribute("type", "text");
-                        textbox.setAttribute("value", _value);
-                        this.baseElement.append(textbox);
-                    }
+                    let textbox = document.createElement("input");
+                    textbox.setAttribute("type", "text");
+                    textbox.setAttribute("value", _value);
+                    textbox.setAttribute("size", _value.length);
+                    this.baseElement.append(textbox);
+                }
+                if (endBracket) {
+                    let bracketLabel = document.createElement("label");
+                    bracketLabel.textContent = "}";
+                    this.baseElement.append(bracketLabel);
                 }
             }
         } else if (type == "other") {
@@ -412,7 +420,9 @@ class Widget {
             */
         }
         if (this.initialValue === null) {
-            console.error("widget initial value has not been set!");
+            if (DEBUG_WIDGET_ERRORS) {
+                console.error("widget initial value has not been set!");
+            }
         }
         if (this.widgetElement !== null) {
             this.widgetElement.addEventListener("change", () => {
@@ -438,7 +448,9 @@ class Widget {
                 }
             });
         } else {
-            console.error("widgetElement has not been set!");
+            if (DEBUG_WIDGET_ERRORS) {
+                console.error("widgetElement has not been set!");
+            }
         }
         if (this.extraCheckboxElement !== null) {
             this.extraCheckboxElement.addEventListener("change", () => {
@@ -546,9 +558,11 @@ function make_widgets2(lines) {
                 blockLabel = new Label("block");
             } else if (line.isBlockComment == "*") {
                 if (line.dropdownOptions) {
-                    console.log(
-                        "Line " + index + " - Found dropdown options in block comment."
-                    );
+                    if (DEBUG_WIDGET_TYPES) {
+                        console.log(
+                            "Line " + index + " - Found dropdown options in block comment."
+                        );
+                    }
                     blockCommentDropdownOptions = line.dropdownOptions;
                 } else {
                     if (blockLabel === null) {
@@ -574,9 +588,11 @@ function make_widgets2(lines) {
             }
         } else if (line.isLineComment && !line.isDefine && !line.includeStatement) {
             if (line.dropdownOptions) {
-                console.log(
-                    "Line " + index + " - Found dropdown options in line comment."
-                );
+                if (DEBUG_WIDGET_TYPES) {
+                    console.log(
+                        "Line " + index + " - Found dropdown options in line comment."
+                    );
+                }
                 blockCommentDropdownOptions = line.dropdownOptions;
             } else {
                 let lineLabel = null;
@@ -612,7 +628,9 @@ function make_widgets2(lines) {
                     lineEnabledType = line.enabledType;
                     lineEnabledTypeVars = line.enabledTypeVars;
                 }
-                console.log("If statement enabled type: " + lineEnabledType + ", variable: " + lineEnabledTypeVars);
+                if (DEBUG_WIDGET_TYPES) {
+                    console.log("If statement enabled type: " + lineEnabledType + ", variable: " + lineEnabledTypeVars);
+                }
                 newContainer.setCondition({
                     type: "enabledType",
                     enabledType: lineEnabledType,
@@ -623,16 +641,20 @@ function make_widgets2(lines) {
                         let foundWidget = variableWidgetPairs[typeVariable];
                         if (foundWidget === undefined) {
                             // TODO: this is not necessarily unwanted behavior, line 74 MOTHERBOARD is not defined beforehand
-                            console.error(
-                                "If statement variable (enabled type) has not been defined yet!: " +
-                                typeVariable
-                            );
+                            if (DEBUG_WIDGET_ERRORS) {
+                                console.error(
+                                    "If statement variable (enabled type) has not been defined yet!: " +
+                                    typeVariable
+                                );
+                            }
                         } else {
-                            console.log(
-                                count +
-                                " - Successfully found if statement variable (enabled type): " +
-                                typeVariable
-                            );
+                            if (DEBUG_WIDGET_TYPES) {
+                                console.log(
+                                    count +
+                                    " - Successfully found if statement variable (enabled type): " +
+                                    typeVariable
+                                );
+                            }
                             foundWidget.addContainer(newContainer);
                             newContainer.addConditionWidget(foundWidget);
                         }
@@ -644,16 +666,20 @@ function make_widgets2(lines) {
             } else {
                 let foundWidget = variableWidgetPairs[line.conditionVariable];
                 if (foundWidget === undefined) {
-                    console.error(
-                        "If statement variable (condition type) has not been defined yet!: " +
-                        line.conditionVariable
-                    );
+                    if (DEBUG_WIDGET_ERRORS) {
+                        console.error(
+                            "If statement variable (condition type) has not been defined yet!: " +
+                            line.conditionVariable
+                        );
+                    }
                 } else {
-                    console.log(
-                        count +
-                        " - Successfully found if statement variable (condition type): " +
-                        line.conditionVariable
-                    );
+                    if (DEBUG_WIDGET_TYPES) {
+                        console.log(
+                            count +
+                            " - Successfully found if statement variable (condition type): " +
+                            line.conditionVariable
+                        );
+                    }
                     foundWidget.addContainer(newContainer);
                     newContainer.addConditionWidget(foundWidget);
                 }
@@ -679,7 +705,9 @@ function make_widgets2(lines) {
             }
             hideableContainers.push(newContainer);
             if (hideableContainers.length > 1) {
-                console.log("Line " + index + " - adding hideableContainer to parent container");
+                if (DEBUG_WIDGET_TYPES) {
+                    console.log("Line " + index + " - adding hideableContainer to parent container");
+                }
                 hideableContainers[hideableContainers.length - 2].addElement(hideableContainers[hideableContainers.length - 1].baseElement);
             } else {
                 htmlElements.push(hideableContainers[hideableContainers.length - 1]);
@@ -692,7 +720,9 @@ function make_widgets2(lines) {
             }
         } else if (line.isDefine || line.includeStatement) {
             if (line.includeStatement) {
-                console.log("Found include statement");
+                if (DEBUG_WIDGET_TYPES) {
+                    console.log("Found include statement");
+                }
             }
             count++;
             var widget = null;
@@ -708,9 +738,11 @@ function make_widgets2(lines) {
                 }
             }
             if (line.dropdownOptions || blockCommentDropdownOptions !== null) {
-                console.log(
-                    count + " - Applying dropdown options to " + line.variable
-                );
+                if (DEBUG_WIDGET_TYPES) {
+                    console.log(
+                        count + " - Applying dropdown options to " + line.variable
+                    );
+                }
                 let dropdownOptions = [];
                 if (blockCommentDropdownOptions !== null) {
                     dropdownOptions = blockCommentDropdownOptions;
@@ -729,7 +761,9 @@ function make_widgets2(lines) {
                     value: line.value
                 });
             } else if (line.hasBracket) {
-                console.log(count + " - multiple: " + line.variable);
+                if (DEBUG_WIDGET_TYPES) {
+                    console.log(count + " - multiple: " + line.variable);
+                }
                 widget = new Widget({
                     type: "multiple",
                     isDisabled: isDisabled,
@@ -754,7 +788,9 @@ function make_widgets2(lines) {
                     });
                 }
             } else if (line.hasQuote || line.includeStatement) {
-                console.log(count + " - textbox: " + line.variable);
+                if (DEBUG_WIDGET_TYPES) {
+                    console.log(count + " - textbox: " + line.variable);
+                }
                 widget = new Widget({
                     type: "textbox",
                     isDisabled: isDisabled,
@@ -763,14 +799,18 @@ function make_widgets2(lines) {
                     value: line.hasQuote ? line.value : line.includeFile
                 });
             } else if (!line.value || line.value == "") {
-                console.log(count + " - checkbox: " + line.variable);
+                if (DEBUG_WIDGET_TYPES) {
+                    console.log(count + " - checkbox: " + line.variable);
+                }
                 widget = new Widget({
                     type: "checkbox",
                     isDisabled: isDisabled,
                     variableName: line.variable
                 });
             } else {
-                console.log(count + " - other: " + line.variable);
+                if (DEBUG_WIDGET_TYPES) {
+                    console.log(count + " - other: " + line.variable);
+                }
                 widget = new Widget({
                     type: "other",
                     isDisabled: isDisabled,
@@ -876,3 +916,31 @@ function saveFile() {
 //     numBox.value = inputNumber;
 //     slider.value = inputNumber;
 // }
+
+function setTheme(themeName) {
+    localStorage.setItem('theme', themeName);
+    document.documentElement.className = themeName;
+}
+
+function toggleTheme() {
+    if (localStorage.getItem('theme') === 'theme-dark') {
+        setTheme('theme-light');
+    } else {
+        setTheme('theme-dark');
+    }
+}
+
+// Immediately invoked function to set the theme on initial load
+(function () {
+    let checkbox = document.getElementById('theme-checkbox');
+    
+    checkbox.addEventListener("change", toggleTheme);
+    
+    if (localStorage.getItem('theme') === 'theme-light') {
+        setTheme('theme-light');
+        checkbox.checked = false;
+    } else {
+        setTheme('theme-dark');
+        checkbox.checked = true;
+    }
+})();

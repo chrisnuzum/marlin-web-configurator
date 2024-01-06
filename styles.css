@@ -1,6 +1,22 @@
+.theme-light {
+    --font-color-main: #000000;
+    --font-color-highlight: #2d2d2d;
+    --color-background: #fbfbfe;
+    --color-highlight: #d0d0d4;
+}
+
+.theme-dark {
+    --font-color-main: #ffffff;
+    --font-color-highlight: #cecece;
+    --color-background: #2a2c2d;
+    --color-highlight: #4e5254;
+}
+
 html {
     font-size: 18px;
     font-family: monospace;
+    color: var(--font-color-main);
+    background-color: var(--color-background);
 }
 
 body {
@@ -12,7 +28,8 @@ nav {
     margin: 0;
     display: block;
     overflow: hidden;
-    background-color: #333;
+    background-color: var(--color-background);
+    border-bottom: 0.1rem solid var(--color-highlight);
 }
 
 nav>ul {
@@ -24,7 +41,7 @@ nav>ul {
 nav>ul>li {
     padding: 0.4em 1em;
     display: inline-block;
-    color: white;
+    color: var(--font-color-main);
 }
 
 nav li>ul {
@@ -32,18 +49,18 @@ nav li>ul {
     margin-left: -1em;
     padding: 0;
     display: none;
-    background-color: #333;
+    background-color: var(--color-background);
     list-style: none;
 }
 
 nav li li {
     padding: 0.4em 1em;
     display: block;
-    color: white;
+    color: var(--font-color-main);
 }
 
 nav li:hover {
-    background-color: #666;
+    background-color: var(--color-highlight);
     cursor: pointer;
 }
 
@@ -63,8 +80,12 @@ nav input[type="file"] {
 
 h1 {
     margin-top: 0.5em;
-    color: darkslategray;
+    color: var(--font-color-highlight);
     text-align: center;
+}
+
+hr {
+    color: var(--color-highlight);
 }
 
 h3 {
@@ -100,7 +121,7 @@ label.equals_header {
 }
 
 label.block_comment {
-    background-color: rgb(167, 167, 167);
+    background-color: var(--color-highlight);
 }
 
 .widgetBase {
@@ -116,25 +137,32 @@ label.block_comment {
 }
 
 .widgetBase input[type="checkbox"]~label {
-    color: gray;
+    color: var(--font-color-highlight);
     text-decoration: line-through;
 }
 
 .widgetBase input[type="checkbox"]:checked~label {
-    color: black;
+    color: var(--font-color-main);
     text-decoration: none;
 }
 
 .widgetBase input[type="text"],
+input[type="number"],
 textarea,
 select {
     font-family: monospace;
     font-size: 1rem;
-    margin-left: auto;
+    /* margin-left: auto; */
+    color: var(--font-color-main);
+    background-color: var(--color-background);
+}
+
+textarea:focus {
+    height: 20rem;
 }
 
 .widgetBase input[type="text"] {
-    width: 500px;
+    /* width: 500px; */
 }
 
 details>details {
