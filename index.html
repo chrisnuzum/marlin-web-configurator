@@ -1,38 +1,34 @@
 <!DOCTYPE html>
 <html manifest="manifest.mf">
-    <head>
-        <title>Marlin Configurator</title>
-        <link rel="stylesheet" href="styles.css" />
-        <script async src="script.js"></script>
-    </head>
-    <body id="container">
-        <nav>
-            <ul>
-                <li>
-                    File
-                    <ul>
-                        <li>
-                            <label for="file_upload">Load config file</label>
-                            <input
-                                type="file"
-                                id="file_upload"
-                                accept=".h, .txt"
-                                onchange="loadFile()" />    <!-- TODO: get rid of this, implement in .js instead -->
-                        </li>
-                        <li onclick="saveFile()">   <!-- TODO: get rid of this, implement in .js instead -->
-                            Save changes<!-- could have this be italic "No changes detected" at beginning -->
-                        </li>
-                    </ul>
-                </li><!-- this comment removes weird ~1px+ horizontal space between items
-             --><li>About</li><!-- this comment removes weird ~1px+ horizontal space between items
-             --><li><input type="checkbox" id="theme-checkbox"/><label for="theme-checkbox">Dark Mode</label></li>
-            </ul>
-        </nav>
-        <h1>Marlin Configurator</h1>
-        <noscript
-            >Please enable JavaScript to be able to use this tool.</noscript
-        >
-        <!-- <details>
+
+<head>
+    <title>Marlin Configurator</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script async src="script.js"></script>
+</head>
+
+<body id="container">
+    <nav>
+        <ul>
+            <li><!--
+            --><label>File</label><!--
+            --><ul>
+                    <li>
+                        <label for="file_upload"><input type="file" id="file_upload" accept=".h, .txt"
+                                onchange="loadFile()" />Load config file</label><!-- TODO: get rid of this, implement in .js instead -->
+                    </li>
+                    <li> <!-- onclick="saveFile()" TODO: get rid of this, implement in .js instead -->
+                        <label>Save changes</label><!-- could have this be italic "No changes detected" at beginning -->
+                    </li>
+                </ul>
+            </li><!-- this comment removes weird ~1px+ horizontal space between items
+             --><li><label>About</label></li><!-- this comment removes weird ~1px+ horizontal space between items
+             --><li><label for="theme-checkbox"><input type="checkbox" id="theme-checkbox" />Dark Mode</label></li>
+        </ul>
+    </nav>
+    <h1>Marlin Configurator</h1>
+    <noscript>Please enable JavaScript to be able to use this tool.</noscript>
+    <!-- <details>
             <summary>Examples:</summary>
             <p>Slider: (input type=range and input type=number)</p>
             <input
@@ -132,9 +128,9 @@ City, State 11111</textarea
             <label for="progress">Downloading progress:</label>
             <progress id="progress" value="32" max="100">32%</progress>
         </details> -->
-        <br />
-        <hr />
-        <!--
+    <br />
+    <hr />
+    <!--
         <iframe
             width="100%"
             height="300"
@@ -142,8 +138,9 @@ City, State 11111</textarea
             src="https://marlinfw.org/docs/configuration/configuration.html"
             title="Explanation of setting"></iframe>
         -->
-        <div id="test" class="settings"></div>
-        <div class="info-popup"></div>
-        <!-- use <aside> for sidebar?-->
-    </body>
+    <div id="test" class="settings"></div>
+    <div class="info-popup"></div>
+    <!-- use <aside> for sidebar?-->
+</body>
+
 </html>
